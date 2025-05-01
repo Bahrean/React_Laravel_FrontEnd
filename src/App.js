@@ -1,15 +1,24 @@
 import React from 'react';
-import SuspectForm from './components/SuspectForm';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Layout from './components/Layout';
+import Home from './pages/Home';
+import About from './pages/About';
+import Report from './pages/Report';
+import Contact from './pages/Contact';
 
 function App() {
   return (
-    <div>
-          <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <SuspectForm />
-    </div>
-    </div>
-
+    <Router>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/report" element={<Report />} />
+          <Route path="/contact" element={<Contact />} />
+        </Routes>
+      </Layout>
+    </Router>
   );
 }
 
-export default App;      
+export default App;
