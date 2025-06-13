@@ -10,7 +10,11 @@ const SuspectForm = () => {
     description: '',
     address: '',
     last_known_location: '',
-    status: 'wanted'
+    status: 'wanted',
+    video: null,
+    audio: null,
+    videoPreview: '',
+    audioPreview: ''
   });
 
   const [errors, setErrors] = useState({});
@@ -18,6 +22,7 @@ const SuspectForm = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
   const formRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,6 +30,48 @@ const SuspectForm = () => {
       ...formData,
       [name]: value
     });
+  };
+
+  const handleFileChange = (e) => {
+    const { name, files } = e.target;
+    const file = files[0];
+    
+    if (file) {
+      // For preview purposes
+      if (name === 'video') {
+        const videoURL = URL.createObjectURL(file);
+        setFormData(prev => ({
+          ...prev,
+          video: file,
+          videoPreview: videoURL
+        }));
+      } else if (name === 'audio') {
+        const audioURL = URL.createObjectURL(file);
+        setFormData(prev => ({
+          ...prev,
+          audio: file,
+          audioPreview: audioURL
+        }));
+      }
+    }
+  };
+
+  const removeMedia = (type) => {
+    if (type === 'video') {
+      URL.revokeObjectURL(formData.videoPreview);
+      setFormData(prev => ({
+        ...prev,
+        video: null,
+        videoPreview: ''
+      }));
+    } else {
+      URL.revokeObjectURL(formData.audioPreview);
+      setFormData(prev => ({
+        ...prev,
+        audio: null,
+        audioPreview: ''
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -40,18 +87,28 @@ const SuspectForm = () => {
     setSuccessMessage('');
 
     try {
+      const formDataToSend = new FormData();
+      
+      // Append all form data to FormData object
+      Object.keys(formData).forEach(key => {
+        if (key !== 'videoPreview' && key !== 'audioPreview') {
+          formDataToSend.append(key, formData[key]);
+        }
+      });
+
       const response = await axios.post(
         'http://localhost:8000/api/suspects',
-        formData,
+        formDataToSend,
         {
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'multipart/form-data',
             'Accept': 'application/json'
           }
         }
       );
 
       setSuccessMessage('Suspect report submitted successfully!');
+      // Reset form including media files
       setFormData({
         full_name: '',
         age: '',
@@ -59,7 +116,11 @@ const SuspectForm = () => {
         description: '',
         address: '',
         last_known_location: '',
-        status: 'wanted'
+        status: 'wanted',
+        video: null,
+        audio: null,
+        videoPreview: '',
+        audioPreview: ''
       });
       setCurrentStep(1);
     } catch (error) {
@@ -89,7 +150,7 @@ const SuspectForm = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center p-4">
-      <div className=" space-y-8">
+      <div className="space-y-8 w-full max-w-4xl">
         {/* Floating glass morphism container */}
         <div 
           ref={formRef}
@@ -105,18 +166,15 @@ const SuspectForm = () => {
           <div className="relative p-8 text-center border-b border-white/10 bg-gradient-to-r from-blue-900/30 to-purple-900/30">
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
             <div className="relative z-10">
-            <h1 className="text-8xl font-bold bg-clip-text  bg-gradient-to-r from-blue to-blue tracking-tight">
+              <h1  className="text-4xl md:text-5xl font-bold bg-clip-text  bg-gradient-to-r from-blue-400 to-blue-600 tracking-tight">
                 Report Suspicious Activity
-            </h1>
-            
-              
-              {/* Step indicator */}
-             
+              </h1>
+          
             </div>
           </div>
 
           {/* Form container */}
-          <div className="p-8 relative">
+          <div className="p-6 md:p-8 relative">
             {/* Status messages */}
             {successMessage && (
               <div className="mb-6 p-4 bg-emerald-900/30 text-emerald-100 rounded-xl border border-emerald-400/30 flex items-center animate-fade-in backdrop-blur-sm">
@@ -149,7 +207,7 @@ const SuspectForm = () => {
               {currentStep === 1 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
                   {/* Full Name */}
-                  <div className="space-y-8">
+                  <div className="space-y-2">
                     <label className="block text-sm font-medium text-blue-100/80" htmlFor="full_name">
                       Full Name <span className="text-rose-400">*</span>
                     </label>
@@ -169,7 +227,7 @@ const SuspectForm = () => {
                   </div>
 
                   {/* Age */}
-                  <div className="space-y-8">
+                  <div className="space-y-2">
                     <label className="block text-sm font-medium text-blue-100/80" htmlFor="age">
                       Age
                     </label>
@@ -190,7 +248,7 @@ const SuspectForm = () => {
                   </div>
 
                   {/* Gender */}
-                  <div className="space-y-8">
+                  <div className="space-y-2">
                     <label className="block text-sm font-medium text-blue-100/80" htmlFor="gender">
                       Gender
                     </label>
@@ -205,13 +263,12 @@ const SuspectForm = () => {
                       >
                         <option value="male" className="bg-gray-800">Male</option>
                         <option value="female" className="bg-gray-800">Female</option>
-                       
                       </select>
                     </div>
                   </div>
 
                   {/* Status */}
-                  <div className="space-y-8">
+                  <div className="space-y-2">
                     <label className="block text-sm font-medium text-blue-100/80" htmlFor="status">
                       Status
                     </label>
@@ -233,12 +290,12 @@ const SuspectForm = () => {
                 </div>
               )}
 
-              {/* Step 2: Description */}
+              {/* Step 2: Description and Media */}
               {currentStep === 2 && (
                 <div className="animate-fade-in">
                   <div className="space-y-6">
                     {/* Description */}
-                    <div className="space-y-8">
+                    <div className="space-y-2">
                       <label className="block text-sm font-medium text-blue-100/80" htmlFor="description">
                         Description <span className="text-rose-400">*</span>
                       </label>
@@ -259,7 +316,7 @@ const SuspectForm = () => {
                     </div>
 
                     {/* Address */}
-                    <div className="space-y-8">
+                    <div className="space-y-2">
                       <label className="block text-sm font-medium text-blue-100/80" htmlFor="address">
                         Address
                       </label>
@@ -277,7 +334,7 @@ const SuspectForm = () => {
                     </div>
 
                     {/* Last Known Location */}
-                    <div className="space-y-8">
+                    <div className="space-y-2">
                       <label className="block text-sm font-medium text-blue-100/80" htmlFor="last_known_location">
                         Last Known Location <span className="text-rose-400">*</span>
                       </label>
@@ -294,6 +351,102 @@ const SuspectForm = () => {
                         />
                       </div>
                       {errors.last_known_location && <p className="mt-1 text-sm text-rose-300 animate-fade-in">{errors.last_known_location[0]}</p>}
+                    </div>
+
+                    {/* Video Upload */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-blue-100/80">
+                        Video Evidence
+                      </label>
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-blue-500/10 rounded-xl blur-md group-hover:blur-lg transition-all duration-300 opacity-0 group-hover:opacity-50"></div>
+                        <div className={`relative block w-full px-5 py-3 rounded-xl border border-white/10 bg-white/5 ${errors.video ? 'border-rose-400/50 bg-rose-900/20' : ''}`}>
+                          {formData.videoPreview ? (
+                            <div className="flex flex-col items-center">
+                              <video 
+                                controls 
+                                className="w-full h-48 rounded-lg mb-3 object-cover"
+                                src={formData.videoPreview}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeMedia('video')}
+                                className="text-sm text-rose-400 hover:text-rose-300 flex items-center"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                                Remove Video
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-4">
+                            
+                              <label htmlFor="video-upload" className="cursor-pointer text-blue-300 hover:text-blue-200 text-sm font-medium">
+                                Upload Video File
+                              </label>
+                              <input
+                                id="video-upload"
+                                type="file"
+                                name="video"
+                                accept="video/*"
+                                onChange={handleFileChange}
+                                className="hidden"
+                              />
+                              <p className="text-xs text-white/50 mt-1">MP4, MOV, AVI (Max 50MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {errors.video && <p className="mt-1 text-sm text-rose-300 animate-fade-in">{errors.video[0]}</p>}
+                    </div>
+
+                    {/* Audio Upload */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-blue-100/80">
+                        Audio Evidence
+                      </label>
+                      <div className="relative group">
+                        <div className="absolute inset-0 bg-blue-500/10 rounded-xl blur-md group-hover:blur-lg transition-all duration-300 opacity-0 group-hover:opacity-50"></div>
+                        <div className={`relative block w-full px-5 py-3 rounded-xl border border-white/10 bg-white/5 ${errors.audio ? 'border-rose-400/50 bg-rose-900/20' : ''}`}>
+                          {formData.audioPreview ? (
+                            <div className="flex flex-col items-center">
+                              <audio 
+                                controls 
+                                className="w-full mb-3"
+                                src={formData.audioPreview}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeMedia('audio')}
+                                className="text-sm text-rose-400 hover:text-rose-300 flex items-center"
+                              >
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                </svg>
+                                Remove Audio
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col items-center justify-center py-4">
+                           
+                              <label htmlFor="audio-upload" className="cursor-pointer text-blue-300 hover:text-blue-200 text-sm font-medium">
+                                Upload Audio File
+                              </label>
+                              <input
+                                id="audio-upload"
+                                type="file"
+                                name="audio"
+                                accept="audio/*"
+                                onChange={handleFileChange}
+                                className="hidden"
+                              />
+                              <p className="text-xs text-white/50 mt-1">MP3, WAV, OGG (Max 20MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {errors.audio && <p className="mt-1 text-sm text-rose-300 animate-fade-in">{errors.audio[0]}</p>}
                     </div>
                   </div>
                 </div>
@@ -338,6 +491,34 @@ const SuspectForm = () => {
                         <div>
                           <p className="text-sm text-white/60">Last Known Location</p>
                           <p className="text-white">{formData.last_known_location || 'Not provided'}</p>
+                        </div>
+                      </div>
+
+                      {/* Media Review */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm text-white/60">Video Evidence</p>
+                          {formData.videoPreview ? (
+                            <video 
+                              controls 
+                              className="w-full h-48 rounded-lg object-cover"
+                              src={formData.videoPreview}
+                            />
+                          ) : (
+                            <p className="text-white/50">No video uploaded</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm text-white/60">Audio Evidence</p>
+                          {formData.audioPreview ? (
+                            <audio 
+                              controls 
+                              className="w-full"
+                              src={formData.audioPreview}
+                            />
+                          ) : (
+                            <p className="text-white/50">No audio uploaded</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -418,8 +599,7 @@ const SuspectForm = () => {
           {/* Footer */}
           <div className="px-8 py-6 border-t border-white/10 bg-gradient-to-b from-transparent to-black/20">
             <div className="flex items-center justify-center">
-           
-
+              <p className="text-sm text-white/50">All information will be handled confidentially</p>
             </div>
           </div>
         </div>
@@ -429,3 +609,16 @@ const SuspectForm = () => {
 };
 
 export default SuspectForm;
+
+
+              // $data =new Suspect();
+            // $videoPath =$request->video_path;
+
+            // $videoname =time().'.'.$video->getClientOriginalExeption();
+
+            // $request->video_path->move('assets',$videoname);
+            // $data->video=$filename;
+            // $data ->save();
+
+
+            // Process file uploads
